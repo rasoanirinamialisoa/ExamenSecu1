@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sequence Application</title>
+    <script type="text/javascript" src="https://09bd26e5e726.eu-west-3.captcha-sdk.awswaf.com/09bd26e5e726/jsapi.js" defer></script>
+</head>
+<body>
+    <h1>Generate the "Forbidden" Sequence</h1>
+    
+    <form id="form">
+        <label for="N">Enter a number between 1 and 1000:</label>
+        <input type="number" id="N" name="N" min="1" max="1000" required>
+        <button type="submit">Submit</button>
+    </form>
+    
+    <div id="output"></div>
+    
+    <div id="my-captcha-container" style="display: none;"></div>
+    
+    <script type="text/javascript">
+        let currentRequest = 0;
+        let totalRequests = 0;
+        let captchaResolved = false;
+        let WAF_API_KEY = '';
+
+        fetch('/api/get-waf-api-key')
+            .then(response => response.json())
+            .then(data => {
+                WAF_API_KEY = data.apiKey;
+                console.log("WAF_API_KEY is set to:", WAF_API_KEY);
+            })
+            .catch(error => {
+                console.error("Error fetching the API key:", error);
+            });
+
+        document.getElementById('form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            totalRequests = parseInt(document.getElementById('N').value);
+            currentRequest = 0;
+            captchaResolved = false;
+            document.getElementById('form').style.display = 'none';
+            document.getElementById('output').innerHTML = '';
+
+            fetchNextRequest();
+        });
+
+        function fetchNextRequest() {
+            if (currentRequest >= totalRequests) return;
+
+            setTimeout(function() {
+                fetch("https://api.prod.jcloudify.com/whoami")
+                    .then(response => {
+                        if (response.status === 403) {
+                            showCaptcha();
+                        } else {
+                            document.getElementById('output').innerHTML += `${currentRequest + 1}. Forbidden<br>`;
+                            currentRequest++;
+                            fetchNextRequest();
+                        }
+                    })
+                    .catch(() => {
+                        showCaptcha();
+                    });
+            }, 1000);
+        }
+
+        function showCaptcha() {
+            document.getElementById('my-captcha-container').style.display = 'block';
+            console.log("Using WAF_API_KEY:", WAF_API_KEY);
+
+            AwsWafCaptcha.renderCaptcha(document.getElementById('my-captcha-container'), {
+                apiKey: WAF_API_KEY,
+                onSuccess: onCaptchaSuccess,
+                onError: onCaptchaError
+            });
+        }
+
+        function onCaptchaSuccess(wafToken) {
+            console.log("Captcha resolved successfully, WAF Token:", wafToken);
+            captchaResolved = true;
+            fetchNextRequest();
+        }
+
+        function onCaptchaError(error) {
+            console.error("Captcha error:", error);
+        }
+    </script>
+</body>
+</html>
