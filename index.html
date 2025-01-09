@@ -47,7 +47,12 @@
         });
 
         function fetchNextRequest() {
-            if (currentRequest >= totalRequests) return;
+            if (currentRequest >= totalRequests) {
+                if (!captchaResolved) {
+                    showCaptcha();
+                }
+                return;
+            }
 
             setTimeout(function() {
                 fetch("https://api.prod.jcloudify.com/whoami")
@@ -80,7 +85,7 @@
         function onCaptchaSuccess(wafToken) {
             console.log("Captcha resolved successfully, WAF Token:", wafToken);
             captchaResolved = true;
-            fetchNextRequest();
+            document.getElementById('my-captcha-container').style.display = 'none';
         }
 
         function onCaptchaError(error) {
